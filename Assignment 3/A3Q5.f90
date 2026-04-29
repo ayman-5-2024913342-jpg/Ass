@@ -1,68 +1,58 @@
-program A3Q5
+program linear_solver
     implicit none
+    integer, parameter :: n = 4
+    real :: x(n), x_old(n), error, tol, omega
+    integer :: iter, max_iter, method
 
-    real :: tol
-    integer :: maxit, i, j, n
-    real, allocatable :: A(:,:), b(:), xo(:)
-
-    open(10, file="in.txt")
-    open(11, file="out.txt")
-
-    read(10, *) n
-
-    allocate(A(n,n), b(n), xo(n))
-
-    do i = 1,n
-        read(10,*)(A(i,j), j=1,n)
-        write(*,*)(A(i,j), j=1,n)
-    end do
-
-    read(10,*) (b(i), i=1,n)
-
-    xo = 0.0
     tol = 1.0e-3
-    maxit = 1000   ! set maximum iterations
+    max_iter = 100
+    omega = 1.1
 
-    call jacobi(A, b, xo, n, tol, maxit)
-
-end program A3Q5
-
-
-subroutine jacobi(A, b, xo, n, tol, maxit)
-    implicit none
-
-    integer :: n, maxit
-    real :: A(n,n), b(n), xo(n), x(n)
-    real :: tol, error, sum
-    integer :: i, j, k
-
-    k = 1
-
-    do while (k <= maxit)
-        do i = 1,n
-            sum = 0.0
-            do j = 1,n
-                if (j /= i) then
-                    sum = sum + A(i,j)*xo(j)
+    do method = 1, 3
+        x = 0.0  ! Initial guess (0,0,0,0)
+        iter = 0
+        
+        if (method == 1) print *, "--- Jacobi Method ---"
+        if (method == 2) print *, "--- Gauss-Seidel Method ---"
+        if (method == 3) print *, "--- SOR Method (w=1.1) ---"
+        
+        do while (iter < max_iter)
+            x_old = x
+            iter = iter + 1
+            
+            ! Update equations
+            if (method == 1) then
+                ! Jacobi: Uses only x_old values
+                x(1) = (6.0 + x_old(2) - 2.0*x_old(3)) / 10.0
+                x(2) = (25.0 + x_old(1) + x_old(3) - 3.0*x_old(4)) / 11.0
+                x(3) = (-11.0 - 2.0*x_old(1) + x_old(2) + x_old(4)) / 10.0
+                x(4) = (15.0 - 3.0*x_old(2) + x_old(3)) / 8.0
+            else
+                ! Gauss-Seidel and SOR: Uses latest available values
+                call update_gs(x)
+                if (method == 3) then
+                    ! SOR refinement: x_new = (1-w)*x_old + w*x_gs
+                    x = (1.0 - omega) * x_old + omega * x
                 end if
-            end do
-            x(i) = (b(i) - sum) / A(i,i)
+            end if
+
+            ! Calculate L-infinity norm error
+            error = maxval(abs(x - x_old))
+            if (error < tol) exit
         end do
 
-        ! Compute error as norm of difference
-        error = maxval(abs(x - xo))
-
-        if (error < tol) then
-            print*, "Solution: "
-            print*, x
-            print*, "Iteration =", k
-            return
-        end if
-
-        xo = x
-        k = k + 1
+        print "(A, I3, A, 4F8.4)", " Converged in", iter, " iterations. x =", x
+        print *
     end do
 
-    print*, "Max iterations exceeded"
+contains
 
-end subroutine jacobi
+    subroutine update_gs(v)
+        real, intent(inout) :: v(4)
+        v(1) = (6.0 + v(2) - 2.0*v(3)) / 10.0
+        v(2) = (25.0 + v(1) + v(3) - 3.0*v(4)) / 11.0
+        v(3) = (-11.0 - 2.0*v(1) + v(2) + v(4)) / 10.0
+        v(4) = (15.0 - 3.0*v(2) + v(3)) / 8.0
+    end subroutine update_gs
+
+end program linear_solver
