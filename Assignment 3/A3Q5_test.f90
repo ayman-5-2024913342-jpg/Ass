@@ -1,100 +1,121 @@
 program A3Q5
     implicit none
-
-    real :: tol
-    integer :: maxit, i, j, n
-    real, allocatable :: A(:,:), b(:), xo(:)
-
-    open(10, file="in.txt")
-    open(11, file="out.txt")
-
-    read(10, *) n
-
-    allocate(A(n,n), b(n), xo(n))
-
-    ! Read matrix A
-    write(*,*) "Matrix A:"
-    write(11,*) "Matrix A:"
-    do i = 1,n
-        read(10,*)(A(i,j), j=1,n)
-        write(*,'(100F10.4)') (A(i,j), j=1,n)
-        write(11,'(100F10.4)') (A(i,j), j=1,n)
+    integer::i,j,k,countrel=0,coumt=2
+    real::s,rel,tol=1.0e-3,omega=1.1
+    real,dimension(4,5)::aug
+    real,dimension(4)::a,a1
+    character,dimension(4)::variables
+    variables(1)='w'
+    variables(2)='x'
+    variables(3)='y'
+    variables(4)='z'
+    a=0
+    open(10, file='A3Q5_in.txt')
+    open(11, file='A3Q5_out1.txt')
+    open(12, file='A3Q5_out2.txt')
+    open(13, file='A3Q5_out3.txt')
+    do i=1,4
+        read(10,*)aug(i,:)
     end do
 
-    ! Read vector b
-    read(10,*) (b(i), i=1,n)
-    write(*,*) "Vector b:"
-    write(*,'(100F10.4)') b
-    write(11,*) "Vector b:"
-    write(11,'(100F10.4)') b
-
-    xo = 0.0
-    tol = 1.0e-3
-    maxit = 1000   ! maximum iterations
-
-    call jacobi(A, b, xo, n, tol, maxit)
-
-    close(10)
-    close(11)
-
-end program A3Q5
-
-
-subroutine jacobi(A, b, xo, n, tol, maxit)
-    implicit none
-
-    integer :: n, maxit
-    real :: A(n,n), b(n), xo(n), x(n)
-    real :: tol, error, sum
-    integer :: i, j, k
-
-    k = 1
-
-    do while (k <= maxit)
-        do i = 1,n
-            sum = 0.0
-            do j = 1,n
-                if (j /= i) then
-                    sum = sum + A(i,j)*xo(j)
-                end if
-            end do
-            x(i) = (b(i) - sum) / A(i,i)
+    do i=1,4
+        s=0
+        do j=1,4
+            if(j==i)cycle
+            s=s+abs(aug(i,j))
         end do
-
-        ! Compute error as infinity norm
-        error = maxval(abs(x - xo))
-
-        if (error < tol) then
-            print*, "----------------------------------"
-            print*, "   Solution (roots) Table"
-            print*, "----------------------------------"
-            print*, " Var     Value"
-            print*, "----------------------------------"
-            do i = 1,n
-                write(*,'(A,I2,A,F12.6)') "x", i, " = ", x(i)
-            end do
-            print*, "----------------------------------"
-            print*, "Iterations =", k
-
-            write(11,*) "----------------------------------"
-            write(11,*) "   Solution (roots) Table"
-            write(11,*) "----------------------------------"
-            write(11,*) " Var     Value"
-            write(11,*) "----------------------------------"
-            do i = 1,n
-                write(11,'(A,I2,A,F12.6)') "x", i, " = ", x(i)
-            end do
-            write(11,*) "----------------------------------"
-            write(11,*) "Iterations =", k
-
-            return
+        if(abs(aug(i,i))<=s)then
+            write(*,*)'diagonally not dominant'
+            stop
         end if
-
-        xo = x
-        k = k + 1
     end do
 
-    print*, "Max iterations exceeded"
-    write(11,*) "Max iterations exceeded"
+    write(11,*)1,a
+    do while(countrel<4)
+        do i=1,4
+            s=aug(i,5)
+            do j=1,4
+                if(i==j)cycle
+                s=s-a(j)*aug(i,j)
+            end do
+            a1(i)=s/aug(i,i)
+        end do
+        write(11,*)coumt,a1
+        countrel=0
+        do i=1,4
+            rel=abs((a(i)-a1(i))/a1(i))
+            if(rel<tol)then
+                countrel=countrel+1
+            end if
+        end do
+        a=a1
+        coumt=coumt+1
+    end do
+    write(11,*)''
+    write(11,*)'final result:'
+    do i=1,4
+        write(11,*)variables(i),' =',a(i)
+    end do
 
-end subroutine jacobi
+    a=0
+    coumt=2
+    countrel=0
+    write(12,*)1,a
+    do while(countrel<4)
+        a1=a
+        do i=1,4
+            s=aug(i,5)
+            do j=1,4
+                if(i==j)cycle
+                s=s-a(j)*aug(i,j)
+            end do
+            a(i)=s/aug(i,i)
+
+        end do
+        write(12,*)coumt,a
+        countrel=0
+        do i=1,4
+            rel=abs((a(i)-a1(i))/a(i))
+            if(rel<tol)then
+                countrel=countrel+1
+            end if
+        end do
+        coumt=coumt+1
+    end do
+    write(12,*)''
+    write(12,*)'final result:'
+    do i=1,4
+        write(12,*)variables(i),' =',a(i)
+    end do
+
+    a=0
+    coumt=2
+    countrel=0
+    write(13,*)1,a
+    do while(countrel<4)
+        a1=a
+        do i=1,4
+            s=aug(i,5)
+            do j=1,4
+                if(i==j)cycle
+                s=s-a(j)*aug(i,j)
+            end do
+            a(i)=(1.0-omega)*a(i)+omega*(s/aug(i,i))
+
+        end do
+        write(13,*)coumt,a
+        countrel=0
+        do i=1,4
+            rel=abs((a(i)-a1(i))/a(i))
+            if(rel<tol)then
+                countrel=countrel+1
+            end if
+        end do
+        coumt=coumt+1
+    end do
+    write(13,*)''
+    write(13,*)'final result:'
+    do i=1,4
+        write(13,*)variables(i),' =',a(i)
+    end do
+end program
