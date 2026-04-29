@@ -26,7 +26,7 @@ program crammer_rule
     call get_det4x4(A, detA)
 
     print *, "The determinant is: ", detA
-    print*,
+    print*, ""
 
     if (abs(detA) < 1e-6) then
         print *, "determinant is zero"

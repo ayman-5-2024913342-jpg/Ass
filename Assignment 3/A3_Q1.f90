@@ -23,7 +23,8 @@ program gaussian_elimination
         end do
 
         !Swap rows if necesssary
-        if (pivot_row /= k) then
+        if (pivot_row /= k) the
+        
             temp = A(k, :)
             A(k, :) = A(pivot_row, :)
             A(pivot_row, :) = temp
